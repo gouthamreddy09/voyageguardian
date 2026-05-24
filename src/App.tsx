@@ -1,133 +1,197 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Plane, Globe } from 'lucide-react';
-import { ItineraryForm } from './components/ItineraryForm';
-import { ItineraryDisplay } from './components/ItineraryDisplay';
-import { LoadingState } from './components/LoadingState';
-import { generateItinerary } from './services/openai';
-import type { TripFormData, Itinerary } from './types/itinerary';
+import React, { useState } from 'react';
+import { Header } from './components/Layout/Header';
+import { Hero } from './components/Landing/Hero';
+import { HiddenGems } from './components/Landing/HiddenGems';
+import { AuthModal } from './components/Auth/AuthModal';
+import { ResetPasswordPage } from './components/Auth/ResetPasswordPage';
+import { TripPlanningForm, TripFormData } from './components/Planning/TripPlanningForm';
+import { Dashboard } from './components/Dashboard/Dashboard';
+import { TripsOverview } from './components/Dashboard/TripsOverview';
+import { ChatSupport } from './components/Chat/ChatSupport';
+import { SavedTrip } from './types';
+import { useAuth } from './hooks/useAuth';
+
+type AppState = 'landing' | 'planning' | 'dashboard' | 'trips' | 'reset-password';
 
 function App() {
-  const [itinerary, setItinerary] = useState<Itinerary | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [appState, setAppState] = useState<AppState>('landing');
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [planningLoading, setPlanningLoading] = useState(false);
+  const [tripData, setTripData] = useState<TripFormData | null>(null);
+  const [savedFormData, setSavedFormData] = useState<TripFormData | null>(null);
+  const [currentSavedTrip, setCurrentSavedTrip] = useState<SavedTrip | null>(null);
+  
+  const { user, loading } = useAuth();
 
-  const handleSubmit = async (form: TripFormData) => {
-    setError('');
-    setLoading(true);
-    setItinerary(null);
+  // Check if we're on the reset password page
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (window.location.pathname === '/reset-password' || urlParams.get('type') === 'recovery') {
+      setAppState('reset-password');
+    }
+  }, []);
 
-    try {
-      const result = await generateItinerary(form);
-      setItinerary(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
-    } finally {
-      setLoading(false);
+  const handleGetStarted = () => {
+    if (user) {
+      setAppState('planning');
+    } else {
+      setAuthModalOpen(true);
     }
   };
 
-  const handleBack = () => {
-    setItinerary(null);
-    setError('');
+  const handleTripSubmit = (formData: TripFormData) => {
+    setPlanningLoading(true);
+    setTripData(formData);
+    setSavedFormData(formData); // Save form data for back navigation
+    
+    // Simulate API call
+    setTimeout(() => {
+      setPlanningLoading(false);
+      setAppState('dashboard');
+    }, 3000);
   };
 
+  const handleBackToPlanning = () => {
+    setAppState('planning');
+    // Don't reset tripData so form can be pre-filled
+  };
+
+  const handleHomeClick = () => {
+    setAppState('landing');
+    setTripData(null);
+    setSavedFormData(null); // Clear saved form data when going home
+  };
+
+  const handleDashboardClick = () => {
+    if (user) {
+      setAppState('trips');
+    } else {
+      setAuthModalOpen(true);
+    }
+  };
+
+  const handleViewTrip = (savedTrip: SavedTrip) => {
+    // Convert SavedTrip to TripFormData format
+    const formData: TripFormData = {
+      destination: savedTrip.destination,
+      startDate: savedTrip.start_date,
+      endDate: savedTrip.end_date,
+      budget: savedTrip.budget,
+      budgetCurrency: savedTrip.budget_currency,
+      travelers: savedTrip.travelers,
+      travelStyle: savedTrip.travel_style,
+      interests: savedTrip.interests
+    };
+    
+    setTripData(formData);
+    setCurrentSavedTrip(savedTrip);
+    setAppState('dashboard');
+  };
+
+  const handlePlanNewTrip = () => {
+    setTripData(null);
+    setSavedFormData(null); // Clear saved form data for new trip
+    setCurrentSavedTrip(null);
+    setAppState('planning');
+  };
+
+  const handleExploreGem = (destination: string) => {
+    if (user) {
+      setSavedFormData({ destination, startDate: '', endDate: '', budget: 1000, budgetCurrency: 'USD', travelers: 1, travelStyle: 'balanced', interests: [] });
+      setAppState('planning');
+    } else {
+      setSavedFormData({ destination, startDate: '', endDate: '', budget: 1000, budgetCurrency: 'USD', travelers: 1, travelStyle: 'balanced', interests: [] });
+      setAuthModalOpen(true);
+    }
+  };
+
+  const handleBackFromDashboard = () => {
+    if (currentSavedTrip) {
+      // If viewing a saved trip, go back to trips overview
+      setAppState('trips');
+      setCurrentSavedTrip(null);
+    } else {
+      // If viewing a new trip, go back to planning
+      setAppState('planning');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50/30 to-teal-50/20">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-lg border-b border-gray-100 sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="bg-gradient-to-br from-sky-500 to-teal-500 p-2 rounded-xl shadow-md">
-              <Plane className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-lg font-bold text-gray-900">TripCraft</span>
+    <div className="min-h-screen bg-gray-100">
+      <Header 
+        onAuthClick={() => setAuthModalOpen(true)}
+        onHomeClick={handleHomeClick}
+        onDashboardClick={handleDashboardClick}
+        showNavigation={appState !== 'landing' && user}
+      />
+      
+      {appState === 'landing' && (
+        <>
+          <Hero onGetStarted={handleGetStarted} />
+          <div id="hidden-gems">
+            <HiddenGems onExplore={handleExploreGem} user={user} onAuthRequired={() => setAuthModalOpen(true)} />
           </div>
-          <div className="flex items-center gap-1.5 text-gray-400 text-sm">
-            <Globe className="h-4 w-4" />
-            <span className="hidden sm:inline">AI-Powered Travel Planning</span>
-          </div>
+        </>
+      )}
+
+      {appState === 'planning' && (
+        <div className="pt-16">
+          <TripPlanningForm 
+            onSubmit={handleTripSubmit} 
+            loading={planningLoading}
+            initialData={savedFormData}
+          />
         </div>
-      </header>
+      )}
 
-      {/* Main Content */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        <AnimatePresence mode="wait">
-          {!itinerary && !loading && (
-            <motion.div
-              key="form"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              {/* Hero text */}
-              <div className="text-center mb-10">
-                <motion.h1
-                  className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                >
-                  Where to next?
-                </motion.h1>
-                <motion.p
-                  className="text-gray-500 text-base sm:text-lg max-w-md mx-auto"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  Get a detailed, personalized travel itinerary generated by AI in seconds.
-                </motion.p>
-              </div>
+      {appState === 'trips' && user && (
+        <TripsOverview 
+          onViewTrip={handleViewTrip}
+          onPlanNewTrip={handlePlanNewTrip}
+        />
+      )}
 
-              <ItineraryForm onSubmit={handleSubmit} loading={loading} />
+      {appState === 'dashboard' && tripData && (
+        <div className="pt-16">
+          <Dashboard 
+            tripData={tripData} 
+            onBack={handleBackFromDashboard}
+            savedTripId={currentSavedTrip?.id}
+          />
+        </div>
+      )}
 
-              {/* Error */}
-              <AnimatePresence>
-                {error && (
-                  <motion.div
-                    className="max-w-2xl mx-auto mt-6 bg-red-50 border border-red-200 text-red-700 px-5 py-4 rounded-xl text-sm"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    {error}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          )}
+      {appState === 'reset-password' && (
+        <ResetPasswordPage 
+          onSuccess={() => {
+            setAppState('landing');
+            setAuthModalOpen(true);
+          }}
+          onCancel={() => setAppState('landing')}
+        />
+      )}
 
-          {loading && (
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <LoadingState />
-            </motion.div>
-          )}
+      <AuthModal 
+        isOpen={authModalOpen} 
+        onClose={() => {
+          setAuthModalOpen(false);
+          if (user) {
+            if (appState === 'landing') {
+              setAppState('planning');
+            }
+          }
+        }} 
+      />
 
-          {itinerary && !loading && (
-            <motion.div
-              key="result"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.4 }}
-            >
-              <ItineraryDisplay itinerary={itinerary} onBack={handleBack} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-gray-100 mt-16 py-6 text-center text-xs text-gray-400">
-        Built with React, TailwindCSS, and OpenAI
-      </footer>
+      <ChatSupport />
     </div>
   );
 }

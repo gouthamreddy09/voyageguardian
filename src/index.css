@@ -4,19 +4,130 @@
 
 @layer base {
   html {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    font-size: 16px;
+  }
+  
+  body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    min-width: 320px;
   }
-
-  body {
-    min-height: 100vh;
+  
+  /* Prevent horizontal scroll on mobile */
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
   }
-
-  select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.75rem center;
-    padding-right: 2.5rem;
+  
+  /* Responsive font scaling */
+  @media (max-width: 640px) {
+    html {
+      font-size: 14px;
+    }
+  }
+  
+  @media (min-width: 641px) and (max-width: 1024px) {
+    html {
+      font-size: 15px;
+    }
+  }
+  
+  @media (min-width: 1025px) and (max-width: 1440px) {
+    html {
+      font-size: 16px;
+    }
+  }
+  
+  /* Large desktop optimizations */
+  @media (min-width: 1441px) {
+    html {
+      font-size: 17px;
+    }
+  }
+  
+  /* Small laptop specific fixes (13-15 inch screens) */
+  @media (min-width: 1024px) and (max-width: 1366px) {
+    html {
+      font-size: 15px;
+    }
+    
+    /* Ensure text has enough contrast on smaller laptop screens */
+    .hero-text {
+      text-shadow: 3px 3px 8px rgba(0,0,0,0.95), 0 0 25px rgba(255,255,255,0.6), 2px 2px 6px rgba(0,0,0,0.8) !important;
+      -webkit-text-stroke: 2px rgba(255,255,255,0.5) !important;
+    }
+    
+    /* Better background overlay for smaller screens */
+    .hero-overlay {
+      background: rgba(0,0,0,0.6) !important;
+    }
+    
+    /* Ensure scrolling is enabled */
+    body {
+      overflow-y: auto !important;
+      height: auto !important;
+    }
+  }
+  
+  /* Extra small laptop screens (older 13" laptops) */
+  @media (min-width: 1024px) and (max-width: 1280px) {
+    html {
+      font-size: 14px;
+    }
+    
+    /* Even stronger text contrast for very small laptops */
+    .hero-text {
+      text-shadow: 4px 4px 10px rgba(0,0,0,0.95), 0 0 30px rgba(255,255,255,0.7), 3px 3px 8px rgba(0,0,0,0.9) !important;
+      -webkit-text-stroke: 3px rgba(255,255,255,0.6) !important;
+    }
+    
+    .hero-overlay {
+      background: rgba(0,0,0,0.65) !important;
+    }
+  }
+  
+  /* Desktop-specific improvements */
+  @media (min-width: 1024px) {
+    /* Better hover states */
+    button:hover, a:hover {
+      transform: translateY(-1px);
+    }
+    
+    /* Smooth transitions */
+    * {
+      transition-property: transform, box-shadow, background-color, border-color;
+      transition-duration: 200ms;
+      transition-timing-function: ease-in-out;
+    }
+    
+    /* Better focus states */
+    button:focus, input:focus, select:focus, textarea:focus {
+      outline: 2px solid #3b82f6;
+      outline-offset: 2px;
+    }
+  }
+  
+  /* Fix text rendering issues */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  
+  /* Ensure proper scaling on different browsers */
+  @media screen and (-webkit-min-device-pixel-ratio: 0) {
+    html {
+      -webkit-text-size-adjust: 100%;
+    }
+  }
+  
+  /* Firefox specific fixes */
+  @-moz-document url-prefix() {
+    html {
+      -moz-text-size-adjust: 100%;
+    }
   }
 }
