@@ -45,7 +45,7 @@ export function Dashboard({ tripData, onBack, savedTripId }: DashboardProps) {
       });
 
       const [itineraryData, weatherData] = await Promise.all([
-        APIService.generateItinerary(tripData.destination, days, tripData.budget, tripData.interests, dates, tripData.travelStyle),
+        APIService.generateItinerary(tripData.destination, days, tripData.budget, tripData.interests, dates, tripData.travelStyle, tripData.travelers, tripData.budgetCurrency),
         APIService.getWeatherForecast(tripData.destination, dates)
       ]);
 

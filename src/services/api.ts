@@ -154,10 +154,47 @@ export class APIService {
     budget: number,
     interests: string[],
     dates: string[],
-    travelStyle: string
+    travelStyle: string,
+    travelers: number = 1,
+    budgetCurrency: string = 'USD'
   ) {
-    // Always use fallback itinerary to avoid rate limit errors
-    console.log('Using fallback itinerary (OpenAI disabled to prevent rate limits)');
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    if (supabaseUrl && supabaseAnonKey) {
+      try {
+        const response = await fetch(`${supabaseUrl}/functions/v1/generate-itinerary`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'Apikey': supabaseAnonKey,
+          },
+          body: JSON.stringify({
+            destination,
+            days,
+            budget,
+            budgetCurrency,
+            interests,
+            dates,
+            travelStyle,
+            travelers,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.itinerary && Array.isArray(data.itinerary)) {
+            return data.itinerary;
+          }
+        }
+
+        console.warn('AI itinerary generation failed, using fallback');
+      } catch (error) {
+        console.warn('AI itinerary generation error, using fallback:', error);
+      }
+    }
+
     return this.generateFallbackItinerary(destination, days, dates, budget, travelStyle);
   }
 
