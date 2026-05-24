@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './components/Layout/Header';
 import { Hero } from './components/Landing/Hero';
 import { HiddenGems } from './components/Landing/HiddenGems';
@@ -8,23 +8,39 @@ import { TripPlanningForm, TripFormData } from './components/Planning/TripPlanni
 import { Dashboard } from './components/Dashboard/Dashboard';
 import { TripsOverview } from './components/Dashboard/TripsOverview';
 import { ChatSupport } from './components/Chat/ChatSupport';
+import { APIKeySettings } from './components/AI/APIKeySettings';
 import { SavedTrip } from './types';
 import { useAuth } from './hooks/useAuth';
+import { loadUserApiKey, decryptApiKey } from './services/aiService';
 
 type AppState = 'landing' | 'planning' | 'dashboard' | 'trips' | 'reset-password';
 
 function App() {
   const [appState, setAppState] = useState<AppState>('landing');
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [planningLoading, setPlanningLoading] = useState(false);
   const [tripData, setTripData] = useState<TripFormData | null>(null);
   const [savedFormData, setSavedFormData] = useState<TripFormData | null>(null);
   const [currentSavedTrip, setCurrentSavedTrip] = useState<SavedTrip | null>(null);
-  
+  const [apiKey, setApiKey] = useState('');
+
   const { user, loading } = useAuth();
 
-  // Check if we're on the reset password page
-  React.useEffect(() => {
+  useEffect(() => {
+    if (user) {
+      loadUserApiKey(user.id).then((encrypted) => {
+        if (encrypted) {
+          const decrypted = decryptApiKey(encrypted);
+          if (decrypted) setApiKey(decrypted);
+        }
+      });
+    } else {
+      setApiKey('');
+    }
+  }, [user]);
+
+  useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (window.location.pathname === '/reset-password' || urlParams.get('type') === 'recovery') {
       setAppState('reset-password');
@@ -42,24 +58,18 @@ function App() {
   const handleTripSubmit = (formData: TripFormData) => {
     setPlanningLoading(true);
     setTripData(formData);
-    setSavedFormData(formData); // Save form data for back navigation
-    
-    // Simulate API call
+    setSavedFormData(formData);
+
     setTimeout(() => {
       setPlanningLoading(false);
       setAppState('dashboard');
     }, 3000);
   };
 
-  const handleBackToPlanning = () => {
-    setAppState('planning');
-    // Don't reset tripData so form can be pre-filled
-  };
-
   const handleHomeClick = () => {
     setAppState('landing');
     setTripData(null);
-    setSavedFormData(null); // Clear saved form data when going home
+    setSavedFormData(null);
   };
 
   const handleDashboardClick = () => {
@@ -71,7 +81,6 @@ function App() {
   };
 
   const handleViewTrip = (savedTrip: SavedTrip) => {
-    // Convert SavedTrip to TripFormData format
     const formData: TripFormData = {
       destination: savedTrip.destination,
       startDate: savedTrip.start_date,
@@ -82,7 +91,7 @@ function App() {
       travelStyle: savedTrip.travel_style,
       interests: savedTrip.interests
     };
-    
+
     setTripData(formData);
     setCurrentSavedTrip(savedTrip);
     setAppState('dashboard');
@@ -90,7 +99,7 @@ function App() {
 
   const handlePlanNewTrip = () => {
     setTripData(null);
-    setSavedFormData(null); // Clear saved form data for new trip
+    setSavedFormData(null);
     setCurrentSavedTrip(null);
     setAppState('planning');
   };
@@ -107,13 +116,15 @@ function App() {
 
   const handleBackFromDashboard = () => {
     if (currentSavedTrip) {
-      // If viewing a saved trip, go back to trips overview
       setAppState('trips');
       setCurrentSavedTrip(null);
     } else {
-      // If viewing a new trip, go back to planning
       setAppState('planning');
     }
+  };
+
+  const handleNeedApiKey = () => {
+    setSettingsOpen(true);
   };
 
   if (loading) {
@@ -126,13 +137,14 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Header 
+      <Header
         onAuthClick={() => setAuthModalOpen(true)}
         onHomeClick={handleHomeClick}
         onDashboardClick={handleDashboardClick}
-        showNavigation={appState !== 'landing' && user}
+        onSettingsClick={user ? () => setSettingsOpen(true) : undefined}
+        showNavigation={appState !== 'landing' && !!user}
       />
-      
+
       {appState === 'landing' && (
         <>
           <Hero onGetStarted={handleGetStarted} />
@@ -144,8 +156,8 @@ function App() {
 
       {appState === 'planning' && (
         <div className="pt-16">
-          <TripPlanningForm 
-            onSubmit={handleTripSubmit} 
+          <TripPlanningForm
+            onSubmit={handleTripSubmit}
             loading={planningLoading}
             initialData={savedFormData}
           />
@@ -153,7 +165,7 @@ function App() {
       )}
 
       {appState === 'trips' && user && (
-        <TripsOverview 
+        <TripsOverview
           onViewTrip={handleViewTrip}
           onPlanNewTrip={handlePlanNewTrip}
         />
@@ -161,16 +173,18 @@ function App() {
 
       {appState === 'dashboard' && tripData && (
         <div className="pt-16">
-          <Dashboard 
-            tripData={tripData} 
+          <Dashboard
+            tripData={tripData}
             onBack={handleBackFromDashboard}
             savedTripId={currentSavedTrip?.id}
+            apiKey={apiKey}
+            onNeedApiKey={handleNeedApiKey}
           />
         </div>
       )}
 
       {appState === 'reset-password' && (
-        <ResetPasswordPage 
+        <ResetPasswordPage
           onSuccess={() => {
             setAppState('landing');
             setAuthModalOpen(true);
@@ -179,8 +193,8 @@ function App() {
         />
       )}
 
-      <AuthModal 
-        isOpen={authModalOpen} 
+      <AuthModal
+        isOpen={authModalOpen}
         onClose={() => {
           setAuthModalOpen(false);
           if (user) {
@@ -188,8 +202,18 @@ function App() {
               setAppState('planning');
             }
           }
-        }} 
+        }}
       />
+
+      {user && (
+        <APIKeySettings
+          isOpen={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          user={user}
+          onKeyChange={setApiKey}
+          currentKey={apiKey}
+        />
+      )}
 
       <ChatSupport />
     </div>

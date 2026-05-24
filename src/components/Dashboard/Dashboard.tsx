@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Users, DollarSign, ArrowLeft, Save, Check } from 'lucide-react';
+import { Calendar, MapPin, Users, DollarSign, ArrowLeft, Save, Check, Sparkles } from 'lucide-react';
 import { TripFormData } from '../Planning/TripPlanningForm';
 import { ItineraryCard } from './ItineraryCard';
 import { WeatherWidget } from './WeatherWidget';
 import { CurrencyWidget } from './CurrencyWidget';
 import { SaveTripModal } from './SaveTripModal';
+import { AIPlanningChat } from '../AI/AIPlanningChat';
 import { ItineraryDay, WeatherData, Activity } from '../../types';
+import type { TripContext } from '../../types/ai';
 import { APIService } from '../../services/api';
 import { TripService } from '../../services/tripService';
 import { useAuth } from '../../hooks/useAuth';
@@ -15,17 +17,31 @@ interface DashboardProps {
   tripData: TripFormData;
   onBack: () => void;
   savedTripId?: string;
+  apiKey: string;
+  onNeedApiKey: () => void;
 }
 
-export function Dashboard({ tripData, onBack, savedTripId }: DashboardProps) {
+export function Dashboard({ tripData, onBack, savedTripId, apiKey, onNeedApiKey }: DashboardProps) {
   const [itinerary, setItinerary] = useState<ItineraryDay[]>([]);
   const [weather, setWeather] = useState<WeatherData[]>([]);
   const [loading, setLoading] = useState(true);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(!!savedTripId);
-  
+  const [aiChatOpen, setAiChatOpen] = useState(false);
+
   const { user } = useAuth();
+
+  const tripContext: TripContext | null = tripData ? {
+    destination: tripData.destination,
+    startDate: tripData.startDate,
+    endDate: tripData.endDate,
+    budget: tripData.budget,
+    budgetCurrency: tripData.budgetCurrency,
+    travelers: tripData.travelers,
+    travelStyle: tripData.travelStyle,
+    interests: tripData.interests,
+  } : null;
 
   useEffect(() => {
     loadTripData();
@@ -291,6 +307,39 @@ export function Dashboard({ tripData, onBack, savedTripId }: DashboardProps) {
         defaultTitle={`Trip to ${tripData.destination}`}
         loading={saving}
       />
+
+      {/* AI Planning Chat */}
+      {user && (
+        <>
+          <motion.button
+            onClick={() => setAiChatOpen(true)}
+            className="fixed bottom-8 right-8 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-white p-4 rounded-2xl shadow-2xl z-40 transition-all duration-300 border border-slate-700/50 group"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.8, type: 'spring', bounce: 0.4 }}
+          >
+            <div className="relative">
+              <Sparkles className="h-6 w-6 text-amber-400 group-hover:text-amber-300 transition-colors" />
+              <motion.div
+                className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-slate-800"
+                animate={{ scale: [1, 1.3, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+            </div>
+          </motion.button>
+
+          <AIPlanningChat
+            isOpen={aiChatOpen}
+            onClose={() => setAiChatOpen(false)}
+            user={user}
+            tripContext={tripContext}
+            apiKey={apiKey}
+            onNeedApiKey={onNeedApiKey}
+          />
+        </>
+      )}
     </div>
   );
 }

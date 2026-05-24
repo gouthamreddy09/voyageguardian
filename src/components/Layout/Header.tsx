@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plane, User, LogOut, Home, LayoutDashboard } from 'lucide-react';
+import { Plane, User, LogOut, Home, LayoutDashboard, Settings } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { motion } from 'framer-motion';
 
@@ -7,10 +7,11 @@ interface HeaderProps {
   onAuthClick: () => void;
   onHomeClick?: () => void;
   onDashboardClick?: () => void;
+  onSettingsClick?: () => void;
   showNavigation?: boolean;
 }
 
-export function Header({ onAuthClick, onHomeClick, onDashboardClick, showNavigation = false }: HeaderProps) {
+export function Header({ onAuthClick, onHomeClick, onDashboardClick, onSettingsClick, showNavigation = false }: HeaderProps) {
   const { user, signOut } = useAuth();
 
   return (
@@ -52,13 +53,22 @@ export function Header({ onAuthClick, onHomeClick, onDashboardClick, showNavigat
             )}
             
             {user ? (
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3">
                 <div className="flex items-center space-x-3 bg-gray-50 px-4 py-2 rounded-full border border-gray-200">
                   <div className="bg-gradient-to-br from-blue-500 to-teal-500 p-1.5 rounded-full">
                     <User className="h-4 w-4 text-white" />
                   </div>
                   <span className="text-sm font-medium">{user.email}</span>
                 </div>
+                {onSettingsClick && (
+                  <button
+                    onClick={onSettingsClick}
+                    className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all duration-200"
+                    title="AI Settings"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </button>
+                )}
                 <button
                   onClick={() => signOut()}
                   className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all duration-200"
